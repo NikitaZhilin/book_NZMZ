@@ -1,5 +1,8 @@
 """Local library prototype. Python standard library; no installation required."""
 import json
+import datetime
+import re
+import uuid
 import os
 import shutil
 import threading
@@ -43,7 +46,34 @@ def read_state():
         return {'schemaVersion': 1, 'revision': 0, 'books': []}
     return json.loads((path if path.exists() else seed).read_text(encoding='utf-8'))
 
+def backup_files():
+    folder = DATA / 'backups'
+    return sorted((p for p in folder.glob('*.json') if p.is_file() and not p.is_symlink() and re.fullmatch(r'[A-Za-z0-9_.-]+\.json', p.name)), key=lambda p:p.name, reverse=True)
+
+def backup_path(name):
+    if not re.fullmatch(r'[A-Za-z0-9_.-]+\.json', name): return None
+    path = DATA / 'backups' / name
+    return path if path.is_file() and not path.is_symlink() else None
+
+def archive_state(raw):
+    previous = validate(json.loads(raw))
+    folder = DATA / 'backups'
+    folder.mkdir(exist_ok=True)
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+    name = stamp + '-r' + str(previous.get('revision', 0)) + '-' + uuid.uuid4().hex[:8] + '.json'
+    with tempfile.NamedTemporaryFile(dir=folder, delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+    os.replace(temporary, folder / name)
+
 def write_state(value):
+    validate(value)
     DATA.mkdir(parents=True, exist_ok=True)
     path = DATA / 'library.json'
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=DATA, delete=False, suffix='.tmp') as stream:
@@ -53,7 +83,10 @@ def write_state(value):
         temp = Path(stream.name)
     try:
         if path.exists():
+            archive_state(path.read_bytes())
             shutil.copy2(path, DATA / 'library.previous.json')
+        elif (ROOT / 'seed.json').exists():
+            archive_state((ROOT / 'seed.json').read_bytes())
         os.replace(temp, path)
     finally:
         temp.unlink(missing_ok=True)
@@ -84,6 +117,13 @@ class Handler(SimpleHTTPRequestHandler):
                     self.reply(200, read_state())
             except Exception:
                 self.reply(500, {'error':'Не удалось прочитать библиотеку. Файл данных сохранён без изменений.'})
+        elif route == '/api/backups':
+            with LOCK:
+                self.reply(200, {'backups':[{'name':p.name,'size':p.stat().st_size} for p in backup_files()]})
+        elif route.startswith('/api/backups/'):
+            path = backup_path(route.removeprefix('/api/backups/'))
+            if path is None: return self.reply(404, {'error':'Копия не найдена'})
+            self.reply(200, json.loads(path.read_text('utf-8')))
         elif route == '/api/health':
             self.reply(200, {'app':'misha-library','version':1})
         elif route in ('/', '/index.html', '/app.js', '/style.css'):

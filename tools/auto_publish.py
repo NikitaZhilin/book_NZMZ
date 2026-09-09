@@ -1,4 +1,5 @@
 """Watch code changes, test stable snapshots, then commit and push."""
+from backup_catalog import run_backup
 import hashlib
 import json
 import msvcrt
@@ -67,8 +68,13 @@ def check_secrets(paths):
 
 log('Started. Only allowlisted code is published; data and credentials are excluded.')
 last=snapshot();changed_at=time.monotonic();last_attempt=None;retry_at=0
+backup_at=0
 while not STOP.exists():
     try:
+        if time.monotonic()>=backup_at:
+            backup_at=time.monotonic()+900
+            try: run_backup()
+            except Exception as error: log('Independent backup failed: '+str(error))
         current=snapshot()
         if current!=last: last=current;changed_at=time.monotonic()
         if time.monotonic()-changed_at>=12 and current!=last_attempt:

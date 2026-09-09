@@ -37,6 +37,17 @@ def script(): return FileResponse(ROOT / 'prototype' / 'app.js', media_type='tex
 @app.get('/style.css')
 def styles(): return FileResponse(ROOT / 'prototype' / 'style.css', media_type='text/css')
 
+@app.get('/api/backups')
+def backups():
+    with storage.LOCK:
+        return {'backups':[{'name':p.name,'size':p.stat().st_size} for p in storage.backup_files()]}
+
+@app.get('/api/backups/{name}')
+def download_backup(name: str):
+    path = storage.backup_path(name)
+    if path is None: return JSONResponse({'error':'Копия не найдена'},status_code=404)
+    return FileResponse(path,media_type='application/json',filename=name)
+
 @app.get('/api/state')
 def get_state():
     try:

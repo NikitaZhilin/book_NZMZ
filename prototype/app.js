@@ -135,15 +135,93 @@ document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{tab=
 for(const type of ['grid','table'])$(type+'-view').onclick=()=>{view=type;for(const other of ['grid','table']){$(other+'-view').classList.toggle('selected',other===type);$(other+'-view').setAttribute('aria-pressed',String(other===type));}render();};
 $('results').onclick=event=>{const button=event.target.closest('[data-open]');if(button)showBook(button.dataset.open);if(event.target.closest('#reset-filters')){$('search').value='';$('category').value='';$('reading').value='';tab='all';page=1;document.querySelector('[data-tab="all"]').click();}};
 $('pagination').onclick=event=>{const button=event.target.closest('[data-page]');if(button&&!button.disabled){page=Number(button.dataset.page);render();$('results').scrollIntoView({block:'start',behavior:'instant'});}};
-$('export').onclick=()=>{if(!state)return;const blob=new Blob([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`misha-library-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+// TRANSFER_CORE_START
+const transferFields=['title','author','isbn','publisher','year','series','pages','illustrator','quantity','category','notes','status','reading','review','favorite','confidence','alternate_isbn','isbn10','language','contents'];
+function aiExport(current) {
+ return {format:'misha-library-edit-v1',baseRevision:current.revision,exportedAt:new Date().toISOString(),
+ instructions:'Редактируйте books. Сохраняйте id существующих книг. Для новой книги уберите id. quantity — физические экземпляры: не суммировать при уточнении. Отсутствующее поле сохраняется; пустая строка явно очищает поле. Не выдумывайте метаданные. review=true для сомнений. Не меняйте format/baseRevision. Отсутствующие книги не удаляются. Обложки и история сохраняются на сайте.',
+ books:current.books.map(b=>Object.fromEntries(['id',...transferFields].filter(k=>b[k]!==undefined).map(k=>[k,b[k]])))};
+}
+function planTransfer(current, input, replace=false) {
+ const full=input?.schemaVersion===1 && Array.isArray(input.books);
+ const ai=input?.format==='misha-library-edit-v1';
+ const incoming=Array.isArray(input)?input:input?.books;
+ if(!Array.isArray(incoming)||(!Array.isArray(input)&&!full&&!ai))throw Error('Нужен массив книг, полная копия или файл «Для ИИ».');
+ if(ai && input.baseRevision!==current.revision)throw Error('После выгрузки каталог изменился. Скачайте свежий файл для ИИ и перенесите правки в него.');
+ if(replace&&!full)throw Error('Полное восстановление доступно только для полной копии.');
+ const next=new Map(current.books.map(b=>[b.id,b])), seen=new Set(), changes=[];
+ const fieldsAllowed=new Set(['id',...transferFields]);
+ for(const raw of incoming){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Каждая книга должна быть объектом.');
+  if(Object.keys(raw).some(k=>['__proto__','prototype','constructor'].includes(k)))throw Error('Недопустимое поле.');
+  if(!full && Object.keys(raw).some(k=>!fieldsAllowed.has(k)))throw Error('Неизвестное поле в файле для редактирования. Используйте поля из выгрузки «Для ИИ».');
+  if(raw.id!==undefined && (typeof raw.id!=='string'||!raw.id))throw Error('Некорректный id книги.');
+  if(full&&!raw.id)throw Error('В полной копии у каждой книги должен быть id.');
+  const id=raw.id||crypto.randomUUID();
+  if(seen.has(id))throw Error('Повтор id в файле: '+id);seen.add(id);
+  const old=next.get(id);
+  const defaults={title:'',author:'',isbn:'',quantity:1,status:'Есть на полке',reading:'Не читали',review:true,favorite:false,cover:''};
+  const book=full&&replace?{...raw}:{...defaults,...old,...raw,id};
+  for(const k of transferFields){
+   if(book[k]===undefined)continue;
+   if(k==='quantity'){if(!Number.isInteger(book[k])||book[k]<1||book[k]>999)throw Error('Количество должно быть целым числом от 1 до 999.');}
+   else if(['review','favorite'].includes(k)){if(typeof book[k]!=='boolean')throw Error(k+' должно быть true или false.');}
+   else if(k==='contents'){if(!Array.isArray(book[k])||book[k].some(v=>typeof v!=='string'))throw Error('contents должен быть массивом строк.');}
+   else if(typeof book[k]!=='string')throw Error(k+' должно быть строкой (числа года и страниц — в кавычках).');
+  }
+  if(!book.title?.trim()&&!book.isbn?.trim())throw Error('У книги должно быть название или ISBN.');
+  if(!old || normalizeISBN(old.isbn)!==normalizeISBN(book.isbn)){
+   const same=[...next.values()].filter(b=>b.id!==id).find(b=>(book.isbn && isbnParts([b.isbn,b.alternate_isbn,b.isbn10].filter(Boolean).join('/')).some(x=>isbnParts(book.isbn).includes(x))) || (book.title && fold(book.title.trim())===fold((b.title||'').trim())));
+   if(same)throw Error('Возможный дубль «'+(same.title||same.isbn)+'». Для обновления используйте его id: '+same.id);
+  }
+  const changed=[...new Set([...Object.keys(book),...Object.keys(old||{})])].filter(k=>k!=='updatedAt' && JSON.stringify(book[k])!==JSON.stringify(old?.[k]));
+  if(changed.length){changes.push({id,title:book.title||book.isbn,kind:old?'Обновление':'Добавление',fields:changed.map(k=>({key:k,before:old?.[k],after:book[k]}))});book.updatedAt=new Date().toISOString();}
+  next.set(id,book);
+ }
+ const missing=current.books.filter(b=>!seen.has(b.id));
+ if(replace)for(const b of missing){next.delete(b.id);changes.push({id:b.id,title:b.title||b.isbn,kind:'Удаление при восстановлении',fields:[]});}
+ return {books:[...next.values()],changes,kept:replace?0:missing.length,full};
+}
+// TRANSFER_CORE_END
+
+
+function downloadJSON(value,name){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+async function freshState(){const response=await fetch('/api/state',{cache:'no-store'});if(!response.ok)throw Error('Не удалось получить свежий каталог');state=await response.json();updateCategories();render();return state;}
+$('export').onclick=async()=>{try{downloadJSON({...await freshState(),exportedAt:new Date().toISOString()},'misha-full-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json');}catch(e){message(e.message);}};
+$('ai-export').onclick=async()=>{try{downloadJSON(aiExport(await freshState()),'misha-for-ai-'+new Date().toISOString().slice(0,10)+'.json');}catch(e){message(e.message);}};
+let pendingTransfer=null, transferPlan=null;
+function previewTransfer(){
+ try{
+  transferPlan=planTransfer(state,pendingTransfer,$('restore-exact').checked);
+  $('transfer-summary').textContent=transferPlan.changes.length+' изменённых карточек. Сохранено вне файла: '+transferPlan.kept+'. Перед записью сервер сохранит текущую версию.';
+  const short=value=>value===undefined?'(не было)':typeof value==='string'&&value.startsWith('data:image/')?'[Обложка]':JSON.stringify(value);
+  $('transfer-details').innerHTML=transferPlan.changes.map(c=>'<details><summary>'+escapeHtml(c.kind+': '+c.title)+'</summary>'+c.fields.map(f=>'<p><strong>'+escapeHtml(f.key)+'</strong><br>Было: '+escapeHtml(short(f.before))+'<br>Станет: '+escapeHtml(short(f.after))+'</p>').join('')+'</details>').join('');
+  $('apply-transfer').disabled=!transferPlan.changes.length;
+ }catch(e){transferPlan=null;$('transfer-summary').textContent=e.message;$('transfer-details').textContent='';$('apply-transfer').disabled=true;}
+}
 $('import').onclick=()=>state && $('import-input').click();
 $('import-input').onchange=async event=>{
-  const file=event.target.files[0];event.target.value='';if(!file)return;
-  try{if(file.size>30*1024*1024)throw new Error('Копия больше 30 МБ.');const imported=JSON.parse(await file.text());if(imported.schemaVersion!==1 || !Array.isArray(imported.books))throw new Error('Выберите копию, сохранённую кнопкой «Скачать копию».');if(!await confirmation(`Заменить рабочий каталог (${state.books.length} записей) содержимым копии (${imported.books.length} записей)? Перед загрузкой рекомендуется скачать текущую копию.`,'Загрузить копию'))return;await saveBooks(imported.books);}catch(error){message(error.message);}
+ const file=event.target.files[0];event.target.value='';if(!file)return;
+ try{if(file.size>30*1024*1024)throw Error('Файл больше 30 МБ.');pendingTransfer=JSON.parse(await file.text());await freshState();$('restore-exact').checked=false;$('restore-option').hidden=!(pendingTransfer?.schemaVersion===1);previewTransfer();$('transfer-dialog').showModal();}catch(e){message(e.message);}
 };
+$('restore-exact').onchange=previewTransfer;
+$('cancel-transfer').onclick=()=>$('transfer-dialog').close();
+$('apply-transfer').onclick=async()=>{
+ if(!transferPlan||busy)return;
+ if(!await confirmation('Применить '+transferPlan.changes.length+' изменений? '+($('restore-exact').checked?'Полное восстановление удалит записи, отсутствующие в копии.':'Книги, отсутствующие в файле, останутся.'),'Применить'))return;
+ if(await saveBooks(transferPlan.books))$('transfer-dialog').close();
+};
+$('backups').onclick=async()=>{
+ $('backup-dialog').showModal();$('backup-list').textContent='Загружаем список…';
+ try{const response=await fetch('/api/backups',{cache:'no-store'});if(!response.ok)throw Error('Список копий недоступен. Полную копию можно скачать кнопкой вверху.');
+ const value=await response.json();$('backup-list').innerHTML=value.backups.length?value.backups.map(b=>'<p><a href="/api/backups/'+encodeURIComponent(b.name)+'" download>'+escapeHtml(b.name)+'</a> · '+Math.ceil(b.size/1024)+' КБ</p>').join(''):'История появится после следующего сохранения. Скачайте полную копию сейчас.';
+ }catch(e){$('backup-list').textContent=e.message;}
+};
+$('close-backups').onclick=()=>$('backup-dialog').close();
+
 async function start(){
-  for(const id of ['add','export','import'])$(id).disabled=true;
-  try{const response=await fetch('/api/state',{cache:'no-store'});if(!response.ok)throw new Error('Библиотека недоступна');state=await response.json();if(state.schemaVersion!==1 || !Array.isArray(state.books))throw new Error('Неверный формат библиотеки');updateCategories();render();$('connection').className='notice success';$('connection').textContent='Библиотека открыта · изменения сохраняются автоматически';for(const id of ['add','export','import'])$(id).disabled=false;}
+  for(const id of ['add','export','import','ai-export'])$(id).disabled=true;
+  try{const response=await fetch('/api/state',{cache:'no-store'});if(!response.ok)throw new Error('Библиотека недоступна');state=await response.json();if(state.schemaVersion!==1 || !Array.isArray(state.books))throw new Error('Неверный формат библиотеки');updateCategories();render();$('connection').className='notice success';$('connection').textContent='Библиотека открыта · изменения сохраняются автоматически';for(const id of ['add','export','import','ai-export'])$(id).disabled=false;}
   catch{$('connection').textContent='Не удалось открыть библиотеку. Обновите страницу; если ошибка остаётся, проверьте соединение или запуск сервера.';}
 }
 start();

@@ -46,4 +46,28 @@ class AppTests(unittest.TestCase):
             response=self.client.get(url)
             self.assertEqual(response.status_code,200)
             self.assertEqual(response.headers['X-Frame-Options'],'DENY')
+
+    def test_archive_download_and_restore(self):
+        original=self.client.get('/api/state').json()
+        changed=json.loads(json.dumps(original))
+        changed['books'][0]['title']='Changed'
+        self.assertEqual(self.post(changed).status_code,200)
+        entries=self.client.get('/api/backups').json()['backups']
+        copies=[self.client.get('/api/backups/'+b['name']).json() for b in entries]
+        saved=next(v for v in copies if v==original)
+        saved['revision']=self.client.get('/api/state').json()['revision']
+        self.assertEqual(self.post(saved).status_code,200)
+        self.assertEqual(self.client.get('/api/state').json()['books'],original['books'])
+        self.assertGreater(len(self.client.get('/api/backups').json()['backups']),len(entries))
+        self.assertEqual(self.client.get('/api/backups/missing.json').status_code,404)
+        self.assertIsNone(storage.backup_path('../library.json'))
+
+    def test_backup_failure_prevents_save(self):
+        from unittest.mock import patch
+        value=self.client.get('/api/state').json()
+        value['books'][0]['title']='Must not save'
+        with patch.object(storage,'archive_state',side_effect=OSError('Disk full')):
+            self.assertEqual(self.post(value).status_code,500)
+        self.assertEqual(storage.read_state(),self.initial)
+
 if __name__=='__main__': unittest.main()

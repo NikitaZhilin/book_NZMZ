@@ -24,3 +24,6 @@ covers/
 # Source conversation specifications remain local
 ARCHITECTURE.md
 TECH_SPEC.md
+
+isbn_55_identification_manifest.json
+README_55_ISBN_TRANSFER.md

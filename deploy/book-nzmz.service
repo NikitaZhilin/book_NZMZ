@@ -1,0 +1,23 @@
+[Unit]
+Description=Misha home library
+After=network.target
+
+[Service]
+User=booklibrary
+Group=booklibrary
+WorkingDirectory=/opt/book-nzmz/repo
+EnvironmentFile=/etc/book-nzmz.env
+EnvironmentFile=-/opt/book-nzmz/release.env
+ExecStart=/opt/book-nzmz/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8769 --workers 1 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/book-nzmz
+UMask=0077
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

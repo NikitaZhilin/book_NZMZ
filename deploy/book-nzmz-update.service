@@ -1,0 +1,8 @@
+[Unit]
+Description=Update library after successful GitHub checks
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/book-nzmz/update.py
+TimeoutStartSec=360

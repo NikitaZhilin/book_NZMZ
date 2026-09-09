@@ -1,0 +1,26 @@
+catalog_misha_books.*
+CONTEXT_FOR_NEXT_CHAT.md
+prototype/seed.json
+prototype/data/
+prototype/backups/
+**/__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+.local/
+data/
+backups/
+covers/
+*.pem
+*.key
+*.log
+*.zip
+*.sqlite*
+*.db
+
+# Source conversation specifications remain local
+ARCHITECTURE.md
+TECH_SPEC.md

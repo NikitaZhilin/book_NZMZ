@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily library backup
+[Service]
+Type=oneshot
+User=booklibrary
+Group=booklibrary
+ExecStart=/usr/bin/python3 /opt/book-nzmz/repo/deploy/backup.py
+UMask=0077

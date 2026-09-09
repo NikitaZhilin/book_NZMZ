@@ -1,4 +1,4 @@
-"""Server deployment; the reverse proxy enforces authentication."""
+"""Server deployment; access policy is configured at the reverse proxy."""
 import json
 import os
 from pathlib import Path

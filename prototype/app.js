@@ -182,12 +182,26 @@ function planTransfer(current, input, replace=false) {
  if(replace)for(const b of missing){next.delete(b.id);changes.push({id:b.id,title:b.title||b.isbn,kind:'Удаление при восстановлении',fields:[]});}
  return {books:[...next.values()],changes,kept:replace?0:missing.length,full};
 }
+function tableExport(current) {
+ const columns=[['id','ID'],['title','Название'],['author','Автор'],['isbn','ISBN'],['alternate_isbn','Связанный ISBN'],['isbn10','ISBN-10'],['publisher','Издательство'],['year','Год'],['series','Серия'],['pages','Страниц'],['illustrator','Иллюстратор'],['quantity','Экземпляров'],['category','Категория'],['status','Наличие'],['reading','Чтение'],['review','Нужно уточнить'],['favorite','Любимая'],['language','Язык'],['contents','Содержание'],['notes','Заметки'],['confidence','Источник описания']];
+ const cell=(value,key)=>{
+  let text=Array.isArray(value)?value.join('; '):typeof value==='boolean'?(value?'Да':'Нет'):String(value??'');
+  if(text && (['isbn','alternate_isbn','isbn10'].includes(key)||/^[\s]*[=+@-]/.test(text)||/^[\t\r\n]/.test(text)))text="'"+text;
+  return '"'+text.replace(/"/g,'""')+'"';
+ };
+ return '\uFEFFsep=;\r\n'+[columns.map(([,label])=>cell(label,'')),...current.books.map(book=>columns.map(([key])=>cell(book[key],key)))].map(row=>row.join(';')).join('\r\n')+'\r\n';
+}
+
 // TRANSFER_CORE_END
 
 
-function downloadJSON(value,name){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function downloadFile(content,name,type){const url=URL.createObjectURL(new Blob([content],{type}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function downloadJSON(value,name){downloadFile(JSON.stringify(value,null,2),name,'application/json');}
+$('table-export').onclick=async()=>{try{downloadFile(tableExport(await freshState()),'misha-table-'+new Date().toISOString().slice(0,10)+'.csv','text/csv;charset=utf-8');}catch(e){message(e.message);}};
 async function freshState(){const response=await fetch('/api/state',{cache:'no-store'});if(!response.ok)throw Error('Не удалось получить свежий каталог');state=await response.json();updateCategories();render();return state;}
-$('export').onclick=async()=>{try{downloadJSON({...await freshState(),exportedAt:new Date().toISOString()},'misha-full-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json');}catch(e){message(e.message);}};
+$('export').onclick=()=>state && $('export-dialog').showModal();
+$('close-export').onclick=()=>$('export-dialog').close();
+$('full-export').onclick=async()=>{try{downloadJSON({...await freshState(),exportedAt:new Date().toISOString()},'misha-full-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json');}catch(e){message(e.message);}};
 $('ai-export').onclick=async()=>{try{downloadJSON(aiExport(await freshState()),'misha-for-ai-'+new Date().toISOString().slice(0,10)+'.json');}catch(e){message(e.message);}};
 let pendingTransfer=null, transferPlan=null;
 function previewTransfer(){

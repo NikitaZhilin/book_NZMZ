@@ -29,6 +29,12 @@ assert.equal(planTransfer(current,[{title:'New',quantity:1}]).books.length,3);
 assert.equal(planTransfer(current,[]).books.length,2);
 const restore=planTransfer(current,{schemaVersion:1,books:[current.books[0]]},true);
 assert.equal(restore.books.length,1);assert.equal(restore.changes.at(-1).kind,'Удаление при восстановлении');
+const csv=tableExport({books:[{id:'x',title:'=SUM(1;2)',isbn:'9780062404527',notes:'First "quote";\nSecond',quantity:12}]});
+assert.ok(csv.startsWith('\uFEFFsep=;\r\n'));
+assert.ok(csv.includes("\"'9780062404527\""));
+assert.ok(csv.includes("\"'=SUM(1;2)\""));
+assert.ok(csv.includes('""quote""'));
+assert.ok(csv.includes('"12"'));
 console.log('Transfer preservation, conflicts, duplicates and restore: OK');
 """
   result=subprocess.run([node,'-e',source+'\n'+checks],cwd=ROOT,capture_output=True,text=True,encoding='utf-8')

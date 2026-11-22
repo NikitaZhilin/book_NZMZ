@@ -3,3 +3,35 @@
 #transfer-details,#backup-list{max-height:50vh;overflow:auto;overflow-wrap:anywhere}#transfer-details details{border-bottom:1px solid #ddd;padding:12px 0}#transfer-details summary{cursor:pointer}#transfer-details p{white-space:pre-wrap}header .actions{flex-wrap:wrap}#restore-option{display:block;margin:16px 0}#restore-option[hidden]{display:none}
 
 .export-options{display:grid;gap:12px}.export-options button{text-align:left;padding:18px;white-space:normal}.export-options strong,.export-options span{display:block}.export-options span{margin-top:8px;font-weight:normal;line-height:1.5}
+
+/* --- Страница инструкции --- */
+a.link-button{display:inline-flex;align-items:center;gap:8px;padding:10px 15px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--ink);text-decoration:none;font-size:16px;line-height:1.2}
+a.link-button:hover{border-color:var(--green);background:var(--light)}
+a.monogram{text-decoration:none}
+.help-page header a.link-button{white-space:nowrap}
+.help-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;align-items:start;max-width:1120px}
+.help-nav{position:sticky;top:20px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.help-nav-title{margin:0 0 10px;font:600 13px/1.2 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.help-nav ol{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
+.help-nav a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
+.help-nav a:hover{border-bottom-color:var(--green)}
+.help article>section{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin-bottom:18px;scroll-margin-top:24px}
+.help h2{font-size:22px;margin-bottom:12px}
+.help p,.help li,.help dd{max-width:75ch}
+.help p,.help ul,.help ol,.help dl{margin:0 0 12px}
+.help section>p:last-child,.help section>ul:last-child,.help section>ol:last-child,.help section>dl:last-child{margin-bottom:0}
+.help ul,.help ol{padding-left:22px;display:grid;gap:6px}
+.help code{background:var(--light);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:14px;white-space:nowrap}
+.help .steps{list-style:decimal;padding-left:24px}
+.callout{margin:14px 0 4px;padding:12px 16px;background:var(--light);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:10px;font-size:15px}
+.callout.warn{background:var(--amber);border-color:#ebd5a3;border-left-color:#c58b1f}
+.help-table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 14px}
+.help-table th,.help-table td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+.help-table th{font-weight:600;background:var(--light)}
+.help-table tr:last-child td{border-bottom:0}
+.help-faq dt{font-weight:600;margin-top:14px}
+.help-faq dt:first-child{margin-top:0}
+.help-faq dd{margin:4px 0 0;color:#3d4a45}
+.help-footer{margin-top:6px}
+@media (max-width:900px){.help-wrap{grid-template-columns:1fr;gap:16px;padding:16px}.help-nav{position:static}.help article>section{padding:18px}.help-table{font-size:13px}.help-table th,.help-table td{padding:7px 8px}}
+@media print{.help-nav,.help-page header .actions,.help-footer{display:none}.help-wrap{display:block;max-width:none}.help article>section{border:0;padding:0 0 14px;break-inside:avoid}body.help-page{background:white}header{border-bottom:1px solid #ccc}}

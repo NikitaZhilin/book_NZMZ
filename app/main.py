@@ -31,6 +31,9 @@ def health():
 @app.get('/index.html')
 def index(): return FileResponse(ROOT / 'prototype' / 'index.html')
 
+@app.get('/help')
+def help_page(): return FileResponse(ROOT / 'prototype' / 'help.html')
+
 @app.get('/app.js')
 def script(): return FileResponse(ROOT / 'prototype' / 'app.js', media_type='text/javascript')
 

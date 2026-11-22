@@ -42,10 +42,17 @@ class AppTests(unittest.TestCase):
         for url in ('/data/library.json','/seed.json','/server.py','/.env','/docs'):
             self.assertEqual(self.client.get(url).status_code,404)
     def test_static_headers(self):
-        for url in ('/','/app.js','/style.css','/health'):
+        for url in ('/','/app.js','/style.css','/health','/help'):
             response=self.client.get(url)
             self.assertEqual(response.status_code,200)
             self.assertEqual(response.headers['X-Frame-Options'],'DENY')
+
+    def test_help_page(self):
+        response=self.client.get('/help')
+        self.assertEqual(response.status_code,200)
+        self.assertIn('text/html',response.headers['content-type'])
+        self.assertIn('Инструкция',response.text)
+        self.assertIn('/style.css',response.text)
 
     def test_archive_download_and_restore(self):
         original=self.client.get('/api/state').json()

@@ -128,6 +128,9 @@ class Handler(SimpleHTTPRequestHandler):
             self.reply(200, {'app':'misha-library','version':1})
         elif route in ('/', '/index.html', '/app.js', '/style.css'):
             super().do_GET()
+        elif route == '/help':
+            self.path = '/help.html'
+            super().do_GET()
         else:
             self.reply(404, {'error':'Не найдено'})
 

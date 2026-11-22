@@ -21,7 +21,9 @@ a.monogram{text-decoration:none}
 .help p,.help ul,.help ol,.help dl{margin:0 0 12px}
 .help>section>p:last-child,.help>section>ul:last-child,.help>section>ol:last-child,.help>section>dl:last-child{margin-bottom:0}
 .help ul,.help ol{padding-left:22px;display:grid;gap:6px}
-.help code{background:var(--light);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:14px;white-space:nowrap}
+.help code{background:var(--light);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:14px;white-space:normal;overflow-wrap:anywhere}
+.help{min-width:0}
+.help>section{overflow-wrap:anywhere}
 .help .steps{list-style:decimal;padding-left:24px}
 .callout{margin:14px 0 4px;padding:12px 16px;background:var(--light);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:10px;font-size:15px}
 .callout.warn{background:var(--amber);border-color:#ebd5a3;border-left-color:#c58b1f}
@@ -33,5 +35,5 @@ a.monogram{text-decoration:none}
 .help-faq dt:first-child{margin-top:0}
 .help-faq dd{margin:4px 0 0;color:#3d4a45}
 .help-footer{margin-top:6px}
-@media (max-width:900px){.help-wrap{grid-template-columns:1fr;gap:16px;padding:16px}.help-nav{position:static}.help>section{padding:18px}.help-table{font-size:13px}.help-table th,.help-table td{padding:7px 8px}}
+@media (max-width:900px){.help-wrap{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}.help-nav{position:static}.help>section{padding:18px}.help-table{font-size:13px;display:block;overflow-x:auto}.help-table th,.help-table td{padding:7px 8px}}
 @media print{.help-nav,.help-page header .actions,.help-footer{display:none}.help-wrap{display:block;max-width:none}.help>section{border:0;padding:0 0 14px;break-inside:avoid}body.help-page{background:white}header{border-bottom:1px solid #ccc}}

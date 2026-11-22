@@ -15,11 +15,11 @@ a.monogram{text-decoration:none}
 .help-nav ol{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
 .help-nav a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
 .help-nav a:hover{border-bottom-color:var(--green)}
-.help article>section{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin-bottom:18px;scroll-margin-top:24px}
+.help>section{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin-bottom:18px;scroll-margin-top:24px}
 .help h2{font-size:22px;margin-bottom:12px}
 .help p,.help li,.help dd{max-width:75ch}
 .help p,.help ul,.help ol,.help dl{margin:0 0 12px}
-.help section>p:last-child,.help section>ul:last-child,.help section>ol:last-child,.help section>dl:last-child{margin-bottom:0}
+.help>section>p:last-child,.help>section>ul:last-child,.help>section>ol:last-child,.help>section>dl:last-child{margin-bottom:0}
 .help ul,.help ol{padding-left:22px;display:grid;gap:6px}
 .help code{background:var(--light);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:14px;white-space:nowrap}
 .help .steps{list-style:decimal;padding-left:24px}
@@ -33,5 +33,5 @@ a.monogram{text-decoration:none}
 .help-faq dt:first-child{margin-top:0}
 .help-faq dd{margin:4px 0 0;color:#3d4a45}
 .help-footer{margin-top:6px}
-@media (max-width:900px){.help-wrap{grid-template-columns:1fr;gap:16px;padding:16px}.help-nav{position:static}.help article>section{padding:18px}.help-table{font-size:13px}.help-table th,.help-table td{padding:7px 8px}}
-@media print{.help-nav,.help-page header .actions,.help-footer{display:none}.help-wrap{display:block;max-width:none}.help article>section{border:0;padding:0 0 14px;break-inside:avoid}body.help-page{background:white}header{border-bottom:1px solid #ccc}}
+@media (max-width:900px){.help-wrap{grid-template-columns:1fr;gap:16px;padding:16px}.help-nav{position:static}.help>section{padding:18px}.help-table{font-size:13px}.help-table th,.help-table td{padding:7px 8px}}
+@media print{.help-nav,.help-page header .actions,.help-footer{display:none}.help-wrap{display:block;max-width:none}.help>section{border:0;padding:0 0 14px;break-inside:avoid}body.help-page{background:white}header{border-bottom:1px solid #ccc}}

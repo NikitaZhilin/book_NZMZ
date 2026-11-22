@@ -1,24 +1,76 @@
-<!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Библиотека Миши</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+﻿<!doctype html>
+<html lang="ru" data-theme="auto"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Библиотека Миши</title>
+<meta name="description" content="Домашний каталог книг: что стоит на полке, что читаем и что нужно уточнить.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f7f4ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)">
+<script src="/theme.js"></script>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script></head>
 <body>
-<header><div class="brand"><span class="monogram" aria-hidden="true">М</span><div><h1>Библиотека Миши</h1><span class="muted">Домашняя коллекция</span></div></div><div class="actions"><a class="link-button" href="/help">Инструкция</a><button id="export">Выгрузить ↓</button><button id="import">Импорт и сверка</button><button id="backups">История копий</button><button class="primary" id="add">＋ Добавить книгу</button></div></header>
+<header class="topbar">
+  <div class="brand">
+    <span class="monogram" aria-hidden="true">М</span>
+    <div class="brand-text">
+      <h1>Библиотека Миши</h1>
+      <p class="brand-status" id="connection" role="status" data-state="loading">Загружаем библиотеку…</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <details class="menu" id="data-menu">
+      <summary><span class="menu-label">Данные</span><svg class="menu-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M5.6 8.2 10 12.6l4.4-4.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+      <div class="menu-panel">
+        <button id="export">Выгрузить в файл</button>
+        <button id="import">Импорт и сверка</button>
+        <button id="backups">История копий</button>
+        <a href="/help">Инструкция</a>
+      </div>
+    </details>
+    <button class="theme-button" id="theme-toggle" type="button" aria-label="Тема: как в системе" title="Тема: как в системе">
+      <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2.8a7.2 7.2 0 0 0 0 14.4z" fill="currentColor"/></svg>
+      <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="currentColor"/><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M10 1.6v1.8M10 16.6v1.8M1.6 10h1.8M16.6 10h1.8M3.9 3.9l1.3 1.3M14.8 14.8l1.3 1.3M16.1 3.9l-1.3 1.3M5.2 14.8l-1.3 1.3"/></g></svg>
+      <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.4 12.6A7.2 7.2 0 0 1 7.4 3.6a7.2 7.2 0 1 0 9 9z" fill="currentColor"/></svg>
+    </button>
+    <button class="primary add-button" id="add"><span class="add-sign" aria-hidden="true">＋</span><span class="add-label">Добавить книгу</span></button>
+  </div>
+</header>
 <main>
-<div id="connection" class="notice" role="status">Загружаем библиотеку…</div>
-<div class="overview"><div><strong id="total">—</strong><span>записей в каталоге</span></div><div><strong id="review-count">—</strong><span>нужно уточнить</span></div><div><strong id="favorite-count">—</strong><span>любимых книг</span></div><p>Книга, издание и экземпляр — разные вещи.<br>Неполные записи сохраняем до сверки.</p></div>
-<nav class="tabs" aria-label="Раздел каталога"><button data-tab="all" class="selected">Все книги</button><button data-tab="shelf">На полке</button><button data-tab="review">Нужно уточнить</button><button data-tab="favorite">Любимые</button></nav>
-<section class="filters" aria-label="Поиск и фильтры"><label class="search">Поиск<input id="search" type="search" placeholder="Название, автор, ISBN или заметка"></label><label>Категория<select id="category"><option value="">Все категории</option></select></label><label>Чтение<select id="reading"><option value="">Любой статус</option><option>Не читали</option><option>Читаем</option><option>Прочитано</option></select></label><label>Порядок<select id="sort"><option value="title">По названию</option><option value="author">По автору</option><option value="recent">Недавно изменённые</option></select></label></section>
-<div class="results-head"><span id="result-count" aria-live="polite"></span><div class="views" aria-label="Вид каталога"><button id="grid-view" class="selected" aria-pressed="true">Карточки</button><button id="table-view" aria-pressed="false">Таблица</button></div></div>
+<section class="summary" aria-label="Сводка каталога">
+  <dl class="stats">
+    <div><dd id="total">—</dd><dt>записей в каталоге</dt></div>
+    <div><dd id="review-count">—</dd><dt>нужно уточнить</dt></div>
+    <div><dd id="favorite-count">—</dd><dt>любимых книг</dt></div>
+  </dl>
+  <p class="summary-note">Книга, издание и экземпляр — разные вещи. Неполные записи сохраняем до сверки.</p>
+</section>
+<div class="catalog-bar">
+  <div class="catalog-top">
+    <nav class="tabs" aria-label="Раздел каталога"><button data-tab="all" class="selected">Все книги</button><button data-tab="shelf">На полке</button><button data-tab="review"><span class="tab-long">Нужно уточнить</span><span class="tab-short">Уточнить</span></button><button data-tab="favorite">Любимые</button></nav>
+    <div class="views" aria-label="Вид каталога"><button id="grid-view" class="selected" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="1.6" width="5" height="5" rx="1"/><rect x="9.4" y="1.6" width="5" height="5" rx="1"/><rect x="1.6" y="9.4" width="5" height="5" rx="1"/><rect x="9.4" y="9.4" width="5" height="5" rx="1"/></svg><span>Карточки</span></button><button id="table-view" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 3.2h12.8M1.6 8h12.8M1.6 12.8h12.8"/></svg><span>Таблица</span></button></div>
+  </div>
+  <section class="filters" aria-label="Поиск и фильтры">
+    <label class="search"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="visually-hidden">Поиск по каталогу</span><input id="search" type="search" placeholder="Название, автор, ISBN или заметка"></label>
+    <label class="filter"><span class="visually-hidden">Категория</span><select id="category"><option value="">Все категории</option></select></label>
+    <label class="filter"><span class="visually-hidden">Чтение</span><select id="reading"><option value="">Чтение: любое</option><option>Не читали</option><option>Читаем</option><option>Прочитано</option></select></label>
+    <label class="filter"><span class="visually-hidden">Порядок</span><select id="sort"><option value="title">По названию</option><option value="author">По автору</option><option value="recent">Недавно изменённые</option></select></label>
+  </section>
+</div>
+<p class="result-count" id="result-count" aria-live="polite"></p>
 <section id="results" class="grid" aria-label="Книги"></section>
 <div id="pagination" class="pagination"></div>
 <footer>Правки сохраняются автоматически. «Полная копия» сохраняет все книги, обложки и исходные данные. «Для ИИ» — редактируемый массив книг без изображений. Перед каждой записью создаётся версия для восстановления.</footer>
 </main>
-<dialog id="book-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><h2 id="dialog-title">Книга</h2><button id="close-dialog" aria-label="Закрыть">✕</button></div><div id="detail"></div><form id="book-form" hidden>
+<dialog id="book-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><h2 id="dialog-title">Книга</h2><button id="close-dialog" class="icon-button" aria-label="Закрыть">✕</button></div><div id="detail"></div><form id="book-form" hidden>
 <input type="hidden" name="id">
 <div class="form-grid"><label class="wide">Название<input name="title" maxlength="1000"></label><label>Автор<input name="author"></label><label>ISBN <span class="muted">несколько — через /</span><input name="isbn"><span id="isbn-hint" class="hint"></span></label><label>Издательство<input name="publisher"></label><label>Год<input name="year" inputmode="numeric"></label><label>Серия<input name="series"></label><label>Иллюстратор<input name="illustrator"></label><label>Страниц<input name="pages" inputmode="numeric"></label><label>Категория<input name="category" list="categories"><datalist id="categories"></datalist></label><label>Физических книг<input name="quantity" type="number" min="1" max="999" required value="1"></label><label>Наличие<select name="status"><option>Есть на полке</option><option>Хочу купить</option><option>Заказано</option><option>Отдано</option></select></label><label>Чтение<select name="reading"><option>Не читали</option><option>Читаем</option><option>Прочитано</option></select></label><label>Обложка<input id="cover-input" type="file" accept="image/jpeg,image/png,image/webp"></label><label class="wide">Текст книги <span class="muted">PDF, до 80 МБ</span><input id="pdf-input" type="file" accept="application/pdf"></label><div class="wide pdf-edit"><span id="pdf-status" class="muted"></span><button id="remove-pdf" type="button" hidden>Удалить PDF</button></div><div class="wide checks"><label><input name="favorite" type="checkbox"> Любимая у Миши</label><label><input name="review" type="checkbox"> Нужно уточнить данные</label></div><div class="wide cover-edit"><img id="cover-preview" alt="Выбранная обложка" hidden><button id="remove-cover" type="button" hidden>Убрать обложку</button></div><label class="wide">Заметки, состояние, содержание сборника<textarea name="notes" rows="4"></textarea></label></div>
-<div id="duplicates" class="notice" hidden></div><div id="form-error" class="error" role="alert"></div><div class="form-actions"><button id="cancel-edit" type="button">Отмена</button><button id="save-book" class="primary" type="submit">Сохранить</button></div></form></dialog>
+<div id="duplicates" class="check-note" hidden></div><div id="form-error" class="error" role="alert"></div><div class="form-actions"><button id="cancel-edit" type="button">Отмена</button><button id="save-book" class="primary" type="submit">Сохранить</button></div></form></dialog>
 <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Подтвердить действие</h2><p id="confirm-text"></p><div class="form-actions"><button id="confirm-no">Отмена</button><button id="confirm-yes" class="primary">Продолжить</button></div></dialog>
-<dialog id="export-dialog" aria-labelledby="export-title"><div class="dialog-head"><h2 id="export-title">Выгрузить библиотеку</h2><button id="close-export" aria-label="Закрыть">✕</button></div><p>В файл попадёт весь актуальный каталог, независимо от поиска и фильтров.</p><div class="export-options"><button id="table-export"><strong>Таблица · CSV</strong><span>Для Excel и других таблиц. Книги и метаданные, без обложек. ISBN сохраняются как текст.</span></button><button id="ai-export"><strong>JSON для ИИ</strong><span>Для уточнения и добавления книг. Результат можно загрузить через «Импорт и сверка».</span></button><button id="full-export"><strong>Полная резервная копия · JSON</strong><span>Все данные, включая обложки и историю карточек. Для хранения и восстановления.</span></button></div><p class="muted">Для обратного импорта используйте JSON. Таблица CSV предназначена для просмотра и ручной работы.</p></dialog>
-<dialog id="transfer-dialog" aria-labelledby="transfer-title"><h2 id="transfer-title">Сверка перед импортом</h2><p>Отсутствующие поля и книги сохраняются. Раскройте карточку, чтобы увидеть изменения. Обложки в выгрузку для ИИ не входят и сохраняются на сайте.</p><label id="restore-option" hidden><input type="checkbox" id="restore-exact"> Полностью восстановить копию, включая удаление отсутствующих книг</label><p id="transfer-summary" role="status"></p><div id="transfer-details"></div><div class="form-actions"><button id="cancel-transfer">Отмена</button><button id="apply-transfer" class="primary">Применить изменения</button></div></dialog>
-<dialog id="backup-dialog" aria-labelledby="backup-title"><h2 id="backup-title">История резервных копий</h2><p>Сервер сохраняет версию перед каждой записью. Скачайте нужный файл и откройте «Импорт и сверка». Для точного отката включите полное восстановление. Храните полную копию также вне сервера.</p><div id="backup-list"></div><button id="close-backups">Закрыть</button></dialog>
+<dialog id="export-dialog" aria-labelledby="export-title"><div class="dialog-head"><h2 id="export-title">Выгрузить библиотеку</h2><button id="close-export" class="icon-button" aria-label="Закрыть">✕</button></div><p class="muted">В файл попадёт весь актуальный каталог, независимо от поиска и фильтров.</p><div class="export-options"><button id="table-export"><strong>Таблица · CSV</strong><span>Для Excel и других таблиц. Книги и метаданные, без обложек. ISBN сохраняются как текст.</span></button><button id="ai-export"><strong>JSON для ИИ</strong><span>Для уточнения и добавления книг. Результат можно загрузить через «Импорт и сверка».</span></button><button id="full-export"><strong>Полная резервная копия · JSON</strong><span>Все данные, включая обложки и историю карточек. Для хранения и восстановления.</span></button></div><p class="muted">Для обратного импорта используйте JSON. Таблица CSV предназначена для просмотра и ручной работы.</p></dialog>
+<dialog id="transfer-dialog" aria-labelledby="transfer-title"><div class="dialog-head"><h2 id="transfer-title">Сверка перед импортом</h2><button id="cancel-transfer" class="icon-button" aria-label="Закрыть">✕</button></div><p>Отсутствующие поля и книги сохраняются. Раскройте карточку, чтобы увидеть изменения. Обложки в выгрузку для ИИ не входят и сохраняются на сайте.</p><label id="restore-option" class="check-line" hidden><input type="checkbox" id="restore-exact"> Полностью восстановить копию, включая удаление отсутствующих книг</label><p id="transfer-summary" class="muted" role="status"></p><div id="transfer-details"></div><div class="form-actions"><button class="primary" id="apply-transfer">Применить изменения</button></div></dialog>
+<dialog id="backup-dialog" aria-labelledby="backup-title"><div class="dialog-head"><h2 id="backup-title">История резервных копий</h2><button id="close-backups" class="icon-button" aria-label="Закрыть">✕</button></div><p class="muted">Сервер сохраняет версию перед каждой записью. Скачайте нужный файл и откройте «Импорт и сверка». Для точного отката включите полное восстановление. Храните полную копию также вне сервера.</p><div id="backup-list"></div></dialog>
 <input id="import-input" type="file" accept="application/json,.json" hidden><div id="toast" role="status" hidden></div>
 </body></html>

@@ -39,7 +39,7 @@ async def secure_headers(request: Request, call_next):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'same-origin'
     response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
-    response.headers['Cache-Control'] = 'no-store'
+    response.headers['Cache-Control'] = 'public, max-age=31536000, immutable' if request.url.path.startswith('/fonts/') else 'no-store'
     return response
 
 @app.get('/health')
@@ -57,8 +57,29 @@ def help_page(): return FileResponse(ROOT / 'prototype' / 'help.html')
 @app.get('/app.js')
 def script(): return FileResponse(ROOT / 'prototype' / 'app.js', media_type='text/javascript')
 
+@app.get('/theme.js')
+def theme_script(): return FileResponse(ROOT / 'prototype' / 'theme.js', media_type='text/javascript')
+
 @app.get('/style.css')
 def styles(): return FileResponse(ROOT / 'prototype' / 'style.css', media_type='text/css')
+
+@app.get('/favicon.ico')
+def favicon(): return FileResponse(ROOT / 'prototype' / 'favicon.ico', media_type='image/x-icon')
+
+@app.get('/favicon.svg')
+def favicon_svg(): return FileResponse(ROOT / 'prototype' / 'favicon.svg', media_type='image/svg+xml')
+
+@app.get('/apple-touch-icon.png')
+def apple_icon(): return FileResponse(ROOT / 'prototype' / 'apple-touch-icon.png', media_type='image/png')
+
+FONT_NAME = re.compile(r'[a-z0-9-]{1,64}\.woff2')
+
+@app.get('/fonts/{name}')
+def font_file(name: str):
+    if not FONT_NAME.fullmatch(name): return JSONResponse({'error':'Не найдено'}, status_code=404)
+    path = ROOT / 'prototype' / 'fonts' / name
+    if not path.is_file(): return JSONResponse({'error':'Не найдено'}, status_code=404)
+    return FileResponse(path, media_type='font/woff2')
 
 @app.get('/api/backups')
 def backups():

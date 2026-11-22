@@ -92,6 +92,8 @@ def write_state(value):
         temp.unlink(missing_ok=True)
 
 class Handler(SimpleHTTPRequestHandler):
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map, '.woff2': 'font/woff2'}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
@@ -126,7 +128,9 @@ class Handler(SimpleHTTPRequestHandler):
             self.reply(200, json.loads(path.read_text('utf-8')))
         elif route == '/api/health':
             self.reply(200, {'app':'misha-library','version':1})
-        elif route in ('/', '/index.html', '/app.js', '/style.css'):
+        elif route in ('/', '/index.html', '/app.js', '/theme.js', '/style.css', '/favicon.ico', '/favicon.svg', '/apple-touch-icon.png'):
+            super().do_GET()
+        elif re.fullmatch(r'/fonts/[a-z0-9-]{1,64}\.woff2', route):
             super().do_GET()
         elif route == '/help':
             self.path = '/help.html'

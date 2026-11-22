@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fold = value => String(value || '').toLocaleLowerCase('ru').replace(/ё/g,'е');
@@ -15,6 +15,7 @@ const fields = ['title','author','isbn','publisher','year','series','pages','ill
 const form = $('book-form');
 const formField = key => form.elements.namedItem(key);
 function message(text) { $('toast').textContent=text; $('toast').hidden=false; clearTimeout(message.timer); message.timer=setTimeout(()=>$('toast').hidden=true,4500); }
+function setStatus(state,text) { const node=$('connection'); node.dataset.state=state; node.textContent=text; node.title=text; }
 function confirmation(text, label='Продолжить') {
   return new Promise(resolve=>{
     const dialog=$('confirm-dialog'); $('confirm-text').textContent=text; $('confirm-yes').textContent=label;
@@ -28,12 +29,27 @@ async function closeDialog() {
   if(!form.hidden && currentForm()!==initialForm && !await confirmation('Закрыть карточку без сохранения введённых изменений?','Закрыть'))return;
   $('book-dialog').close();
 }
-function coverHTML(book) {
-  if(book.cover && /^data:image\/(jpeg|png|webp);base64,/.test(book.cover))return `<div class="cover"><img loading="lazy" src="${escapeHtml(book.cover)}" alt="Обложка: ${escapeHtml(book.title || book.isbn)}"></div>`;
-  const initials=(book.author || book.title || 'ISBN').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-  return `<div class="cover"><div class="placeholder">${escapeHtml(initials)}<small>Обложка не добавлена</small></div></div>`;
+function spineFor(value) {
+  const text=String(value || '');
+  let hash=0;
+  for(let index=0;index<text.length;index+=1)hash=(hash*33+text.charCodeAt(index))>>>0;
+  return (hash%6)+1;
 }
-function badges(book) {return `<div class="badges">${book.pdf?'<span class="badge">PDF</span>':''}${book.review?'<span class="badge amber">Нужно уточнить</span>':''}${book.quantity>1?`<span class="badge">${book.quantity} экз.</span>`:''}${book.reading && book.reading!=='Не читали'?`<span class="badge">${escapeHtml(book.reading)}</span>`:''}${book.category?`<span class="badge">${escapeHtml(book.category)}</span>`:''}</div>`;}
+function coverHTML(book) {
+  if(book.cover && /^data:image\/(jpeg|png|webp);base64,/.test(book.cover))return `<span class="book-cover"><img loading="lazy" src="${escapeHtml(book.cover)}" alt="Обложка: ${escapeHtml(book.title || book.isbn)}"></span>`;
+  const initials=(book.author || book.title || 'ISBN').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+  return `<span class="book-cover"><span class="placeholder">${escapeHtml(initials)}<small>обложки нет</small></span></span>`;
+}
+function badges(book) {
+  const parts=[];
+  if(book.pdf)parts.push('<span class="tag">PDF</span>');
+  if(book.review)parts.push('<span class="tag warn">Уточнить</span>');
+  if(book.quantity>1)parts.push(`<span>${book.quantity} экз.</span>`);
+  if(book.reading && book.reading!=='Не читали')parts.push(`<span>${escapeHtml(book.reading)}</span>`);
+  if(book.category)parts.push(`<span>${escapeHtml(book.category)}</span>`);
+  return `<span class="book-meta">${parts.join('')}</span>`;
+}
+const heartMark='<span class="book-mark" aria-label="Любимая книга"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16.4S3.4 12.3 3.4 7.9a3.6 3.6 0 0 1 6.6-2 3.6 3.6 0 0 1 6.6 2c0 4.4-6.6 8.5-6.6 8.5z"/></svg></span>';
 const fileSize = bytes => bytes ? (bytes/1048576).toFixed(1).replace('.0','')+' МБ' : '';
 function pdfLinks(book) {
   if(!book.pdf)return '';
@@ -67,18 +83,18 @@ function render() {
   $('total').textContent=state.books.length;$('review-count').textContent=state.books.filter(b=>b.review).length;$('favorite-count').textContent=state.books.filter(b=>b.favorite).length;
   const all=filteredBooks(), pages=Math.max(1,Math.ceil(all.length/PAGE_SIZE));page=Math.min(page,pages);
   const books=all.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
-  $('result-count').textContent=`Найдено: ${all.length} · ${books.length?`${(page-1)*PAGE_SIZE+1}–${(page-1)*PAGE_SIZE+books.length}`:'0'} из ${all.length}`;
+  $('result-count').textContent=all.length?`Найдено ${all.length} · показаны ${(page-1)*PAGE_SIZE+1}–${(page-1)*PAGE_SIZE+books.length}`:'Ничего не найдено';
   $('results').className=view==='grid'?'grid':'table-wrap';
   if(!all.length){$('results').innerHTML='<div class="empty"><h2>Здесь пока нет книг</h2><p>Попробуйте другой запрос или сбросьте фильтры.</p><button id="reset-filters">Сбросить фильтры</button></div>';}
-  else if(view==='grid')$('results').innerHTML=books.map(book=>`<button class="book" data-open="${escapeHtml(book.id)}">${coverHTML(book)}${book.favorite?'<span class="star" aria-label="Любимая">♥</span>':''}<div class="book-copy"><h3>${escapeHtml(book.title || 'Книга по ISBN')}</h3><div class="author">${escapeHtml(book.author || book.isbn || 'Автор не указан')}</div>${badges(book)}</div></button>`).join('');
-  else $('results').innerHTML=`<table><thead><tr><th>Название</th><th>Автор</th><th>ISBN</th><th>Экз.</th><th>Статус</th></tr></thead><tbody>${books.map(book=>`<tr><td><button data-open="${escapeHtml(book.id)}">${book.favorite?'♥ ':''}${escapeHtml(book.title || 'Книга по ISBN')}</button></td><td>${escapeHtml(book.author || '—')}</td><td>${escapeHtml(book.isbn || '—')}</td><td>${book.quantity}</td><td>${escapeHtml(book.review?'Нужно уточнить':book.status)}</td></tr>`).join('')}</tbody></table>`;
+  else if(view==='grid')$('results').innerHTML=books.map(book=>`<button class="book" data-open="${escapeHtml(book.id)}" data-spine="${spineFor(book.category || book.title)}">${coverHTML(book)}${book.favorite?heartMark:''}<span class="book-copy"><span class="book-title">${escapeHtml(book.title || 'Книга по ISBN')}</span><span class="book-author">${escapeHtml(book.author || book.isbn || 'Автор не указан')}</span>${badges(book)}</span></button>`).join('');
+  else $('results').innerHTML=`<table><thead><tr><th>Название</th><th>Автор</th><th>ISBN</th><th>Экз.</th><th>Статус</th></tr></thead><tbody>${books.map(book=>`<tr><td><button data-open="${escapeHtml(book.id)}">${book.favorite?'<span class="row-heart" aria-hidden="true">♥</span>':''}${escapeHtml(book.title || 'Книга по ISBN')}</button></td><td>${escapeHtml(book.author || '—')}</td><td class="isbn">${escapeHtml(book.isbn || '—')}</td><td>${book.quantity}</td><td>${book.review?'<span class="tag warn">Уточнить</span>':escapeHtml(book.status)}</td></tr>`).join('')}</tbody></table>`;
   $('pagination').innerHTML=pages>1?`<button data-page="${page-1}" ${page===1?'disabled':''}>← Назад</button><span>${page} / ${pages}</span><button data-page="${page+1}" ${page===pages?'disabled':''}>Далее →</button>`:'';
 }
 function bookById(id){return state.books.find(b=>b.id===id);}
 function showBook(id) {
   const book=bookById(id);if(!book)return;selectedId=id;form.hidden=true;$('detail').hidden=false;$('dialog-title').textContent='Карточка книги';
   const metadata=[['ISBN',book.isbn],['Издательство',book.publisher],['Год',book.year],['Иллюстратор',book.illustrator],['Серия',book.series],['Страниц',book.pages],['Физических книг',book.quantity],['Наличие',book.status],['Чтение',book.reading||'Не читали'],['Источник описания',book.confidence]];
-  $('detail').innerHTML=`<div class="detail-layout">${coverHTML(book)}<div><h3 class="detail-title">${escapeHtml(book.title || 'Книга по ISBN')}</h3><p>${escapeHtml(book.author || 'Автор не указан')}</p>${badges(book)}<dl class="metadata">${metadata.map(([k,v])=>`<div><dt>${k}</dt><dd>${escapeHtml(v || 'Не указано')}</dd></div>`).join('')}</dl></div></div>${book.notes?`<h3>Заметки</h3><div class="notes">${escapeHtml(book.notes)}</div>`:''}${pdfLinks(book)}<div class="form-actions"><button class="danger" id="delete-book">Удалить запись</button><button id="toggle-favorite">${book.favorite?'Убрать из любимых':'♡ В любимые'}</button><button class="primary" id="edit-book">Редактировать</button></div>`;
+  $('detail').innerHTML=`<div class="detail-layout">${coverHTML(book)}<div><h3 class="detail-title">${escapeHtml(book.title || 'Книга по ISBN')}</h3><p class="detail-author">${escapeHtml(book.author || 'Автор не указан')}</p>${badges(book)}<dl class="metadata">${metadata.map(([k,v])=>`<div><dt>${k}</dt><dd>${escapeHtml(v || 'Не указано')}</dd></div>`).join('')}</dl></div></div>${book.notes?`<p class="detail-section-title">Заметки</p><div class="notes">${escapeHtml(book.notes)}</div>`:''}${pdfLinks(book)}<div class="form-actions"><button class="danger" id="delete-book">Удалить запись</button><button id="toggle-favorite">${book.favorite?'Убрать из любимых':'♡ В любимые'}</button><button class="primary" id="edit-book">Редактировать</button></div>`;
   if(!$('book-dialog').open)$('book-dialog').showModal();
   $('edit-book').onclick=()=>editBook(book);$('delete-book').onclick=()=>deleteBook(book);$('toggle-favorite').onclick=async()=>{if(await saveBooks(state.books.map(b=>b.id===id?{...b,favorite:!b.favorite,updatedAt:new Date().toISOString()}:b)))showBook(id);};
 }
@@ -104,8 +120,8 @@ async function saveBooks(books) {
   try{
     const response=await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...state,books})});
     const result=await response.json();if(!response.ok)throw new Error(result.error || 'Не удалось сохранить');
-    state={...state,books,revision:result.revision};updateCategories();render();$('connection').className='notice success';$('connection').textContent='Сохранено · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});message('Изменения сохранены');return true;
-  }catch(error){$('form-error').textContent=error.message;$('connection').className='notice';$('connection').textContent=error.message;message('Изменения не сохранены');return false;}
+    state={...state,books,revision:result.revision};updateCategories();render();setStatus('saved','Сохранено · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}));message('Изменения сохранены');return true;
+  }catch(error){$('form-error').textContent=error.message;setStatus('error',error.message);message('Изменения не сохранены');return false;}
   finally{busy=false;controls.forEach(({element,disabled})=>element.disabled=disabled);}
 }
 async function deleteBook(book) {
@@ -269,7 +285,16 @@ $('close-backups').onclick=()=>$('backup-dialog').close();
 
 async function start(){
   for(const id of ['add','export','import','ai-export'])$(id).disabled=true;
-  try{const response=await fetch('/api/state',{cache:'no-store'});if(!response.ok)throw new Error('Библиотека недоступна');state=await response.json();if(state.schemaVersion!==1 || !Array.isArray(state.books))throw new Error('Неверный формат библиотеки');updateCategories();render();$('connection').className='notice success';$('connection').textContent='Библиотека открыта · изменения сохраняются автоматически';for(const id of ['add','export','import','ai-export'])$(id).disabled=false;}
-  catch{$('connection').textContent='Не удалось открыть библиотеку. Обновите страницу; если ошибка остаётся, проверьте соединение или запуск сервера.';}
+  try{const response=await fetch('/api/state',{cache:'no-store'});if(!response.ok)throw new Error('Библиотека недоступна');state=await response.json();if(state.schemaVersion!==1 || !Array.isArray(state.books))throw new Error('Неверный формат библиотеки');updateCategories();render();setStatus('saved','Изменения сохраняются автоматически');for(const id of ['add','export','import','ai-export'])$(id).disabled=false;}
+  catch{setStatus('error','Не удалось открыть библиотеку. Обновите страницу; если ошибка остаётся, проверьте соединение или запуск сервера.');}
 }
 start();
+
+// Меню «Данные»
+(function dataMenu(){
+  const details=$('data-menu');
+  if(!details)return;
+  document.addEventListener('click',event=>{if(details.open && !details.contains(event.target))details.open=false;});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape' && details.open)details.open=false;});
+  details.addEventListener('click',event=>{if(event.target.closest('.menu-panel button,.menu-panel a'))details.open=false;});
+})();

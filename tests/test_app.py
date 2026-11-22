@@ -42,10 +42,26 @@ class AppTests(unittest.TestCase):
         for url in ('/data/library.json','/seed.json','/server.py','/.env','/docs'):
             self.assertEqual(self.client.get(url).status_code,404)
     def test_static_headers(self):
-        for url in ('/','/app.js','/style.css','/health','/help'):
+        for url in ('/','/app.js','/theme.js','/style.css','/favicon.ico','/favicon.svg','/apple-touch-icon.png','/health','/help'):
             response=self.client.get(url)
             self.assertEqual(response.status_code,200)
             self.assertEqual(response.headers['X-Frame-Options'],'DENY')
+            self.assertIn("default-src 'self'",response.headers['Content-Security-Policy'])
+
+    def test_fonts_are_local_and_cached(self):
+        response=self.client.get('/fonts/literata-cyrillic.woff2')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.headers['content-type'],'font/woff2')
+        self.assertIn('immutable',response.headers['cache-control'])
+        for url in ('/fonts/missing.woff2','/fonts/../library.json','/fonts/theme.js'):
+            self.assertNotEqual(self.client.get(url).status_code,200)
+        self.assertEqual(self.client.get('/style.css').headers['cache-control'],'no-store')
+
+    def test_index_links_icons_and_theme(self):
+        page=self.client.get('/').text
+        for marker in ('rel="icon" href="/favicon.svg"','rel="icon" href="/favicon.ico"',
+                       'rel="apple-touch-icon"','/theme.js','data-theme="auto"','prefers-color-scheme'):
+            self.assertIn(marker,page)
 
     def test_help_page(self):
         response=self.client.get('/help')

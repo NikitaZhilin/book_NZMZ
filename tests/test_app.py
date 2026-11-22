@@ -54,6 +54,29 @@ class AppTests(unittest.TestCase):
         self.assertIn('Инструкция',response.text)
         self.assertIn('/style.css',response.text)
 
+    def test_pdf_upload_serve_delete(self):
+        book=self.client.get('/api/state').json()['books'][0]
+        payload=b'%PDF-1.4\n% test file\n'
+        response=self.client.post(f"/api/books/{book['id']}/file",content=payload,
+                                  headers={'Origin':ORIGIN,'Content-Type':'application/pdf','X-File-Name':'test.pdf'})
+        self.assertEqual(response.status_code,200)
+        state=self.client.get('/api/state').json()
+        self.assertEqual(state['books'][0]['pdf']['name'],'test.pdf')
+        self.assertEqual(state['books'][0]['pdf']['size'],len(payload))
+        served=self.client.get(f"/api/books/{book['id']}/file")
+        self.assertEqual(served.status_code,200)
+        self.assertEqual(served.content,payload)
+        self.assertEqual(served.headers['content-type'],'application/pdf')
+        self.assertIn('inline',served.headers['content-disposition'])
+        self.assertEqual(self.client.post(f"/api/books/{book['id']}/file",content=b'not a pdf',
+                                          headers={'Origin':ORIGIN}).status_code,400)
+        self.assertEqual(self.client.post(f"/api/books/{book['id']}/file",content=payload).status_code,403)
+        self.assertEqual(self.client.delete(f"/api/books/{book['id']}/file").status_code,403)
+        self.assertEqual(self.client.delete(f"/api/books/{book['id']}/file",headers={'Origin':ORIGIN}).status_code,200)
+        state=self.client.get('/api/state').json()
+        self.assertNotIn('pdf',state['books'][0])
+        self.assertEqual(self.client.get(f"/api/books/{book['id']}/file").status_code,404)
+
     def test_archive_download_and_restore(self):
         original=self.client.get('/api/state').json()
         changed=json.loads(json.dumps(original))

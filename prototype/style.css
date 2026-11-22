@@ -38,3 +38,6 @@ a.monogram{text-decoration:none}
 @media (max-width:900px){.help-wrap{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}.help-nav{position:static}.help>section{padding:18px}.help-table{font-size:13px}.help-table th,.help-table td{padding:7px 8px}}
 @media (max-width:720px){.help-table,.help-table tbody{display:block}.help-table thead{display:none}.help-table tr{display:block;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--paper)}.help-table td{display:block;border:0;padding:3px 0}.help-table td::before{content:attr(data-label);display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}}
 @media print{.help-nav,.help-page header .actions,.help-footer{display:none}.help-wrap{display:block;max-width:none}.help>section{border:0;padding:0 0 14px;break-inside:avoid}body.help-page{background:white}header{border-bottom:1px solid #ccc}}
+
+.pdf-links{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
+.pdf-edit{display:flex;flex-wrap:wrap;gap:12px;align-items:center}

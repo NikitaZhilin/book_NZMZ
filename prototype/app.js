@@ -33,7 +33,13 @@ function coverHTML(book) {
   const initials=(book.author || book.title || 'ISBN').trim().split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
   return `<div class="cover"><div class="placeholder">${escapeHtml(initials)}<small>Обложка не добавлена</small></div></div>`;
 }
-function badges(book) {return `<div class="badges">${book.review?'<span class="badge amber">Нужно уточнить</span>':''}${book.quantity>1?`<span class="badge">${book.quantity} экз.</span>`:''}${book.reading && book.reading!=='Не читали'?`<span class="badge">${escapeHtml(book.reading)}</span>`:''}${book.category?`<span class="badge">${escapeHtml(book.category)}</span>`:''}</div>`;}
+function badges(book) {return `<div class="badges">${book.pdf?'<span class="badge">PDF</span>':''}${book.review?'<span class="badge amber">Нужно уточнить</span>':''}${book.quantity>1?`<span class="badge">${book.quantity} экз.</span>`:''}${book.reading && book.reading!=='Не читали'?`<span class="badge">${escapeHtml(book.reading)}</span>`:''}${book.category?`<span class="badge">${escapeHtml(book.category)}</span>`:''}</div>`;}
+const fileSize = bytes => bytes ? (bytes/1048576).toFixed(1).replace('.0','')+' МБ' : '';
+function pdfLinks(book) {
+  if(!book.pdf)return '';
+  const id=encodeURIComponent(book.id);
+  return `<div class="pdf-links"><a class="link-button" href="/api/books/${id}/file" target="_blank" rel="noopener">Читать PDF</a><a class="link-button" href="/api/books/${id}/file?download=1">Скачать</a><span class="muted">${escapeHtml(fileSize(book.pdf.size))}</span></div>`;
+}
 function filteredBooks() {
   if(!state)return [];
   const query=fold($('search').value.trim()), isbnQuery=normalizeISBN(query), category=$('category').value, reading=$('reading').value;
@@ -72,12 +78,12 @@ function bookById(id){return state.books.find(b=>b.id===id);}
 function showBook(id) {
   const book=bookById(id);if(!book)return;selectedId=id;form.hidden=true;$('detail').hidden=false;$('dialog-title').textContent='Карточка книги';
   const metadata=[['ISBN',book.isbn],['Издательство',book.publisher],['Год',book.year],['Иллюстратор',book.illustrator],['Серия',book.series],['Страниц',book.pages],['Физических книг',book.quantity],['Наличие',book.status],['Чтение',book.reading||'Не читали'],['Источник описания',book.confidence]];
-  $('detail').innerHTML=`<div class="detail-layout">${coverHTML(book)}<div><h3 class="detail-title">${escapeHtml(book.title || 'Книга по ISBN')}</h3><p>${escapeHtml(book.author || 'Автор не указан')}</p>${badges(book)}<dl class="metadata">${metadata.map(([k,v])=>`<div><dt>${k}</dt><dd>${escapeHtml(v || 'Не указано')}</dd></div>`).join('')}</dl></div></div>${book.notes?`<h3>Заметки</h3><div class="notes">${escapeHtml(book.notes)}</div>`:''}<div class="form-actions"><button class="danger" id="delete-book">Удалить запись</button><button id="toggle-favorite">${book.favorite?'Убрать из любимых':'♡ В любимые'}</button><button class="primary" id="edit-book">Редактировать</button></div>`;
+  $('detail').innerHTML=`<div class="detail-layout">${coverHTML(book)}<div><h3 class="detail-title">${escapeHtml(book.title || 'Книга по ISBN')}</h3><p>${escapeHtml(book.author || 'Автор не указан')}</p>${badges(book)}<dl class="metadata">${metadata.map(([k,v])=>`<div><dt>${k}</dt><dd>${escapeHtml(v || 'Не указано')}</dd></div>`).join('')}</dl></div></div>${book.notes?`<h3>Заметки</h3><div class="notes">${escapeHtml(book.notes)}</div>`:''}${pdfLinks(book)}<div class="form-actions"><button class="danger" id="delete-book">Удалить запись</button><button id="toggle-favorite">${book.favorite?'Убрать из любимых':'♡ В любимые'}</button><button class="primary" id="edit-book">Редактировать</button></div>`;
   if(!$('book-dialog').open)$('book-dialog').showModal();
   $('edit-book').onclick=()=>editBook(book);$('delete-book').onclick=()=>deleteBook(book);$('toggle-favorite').onclick=async()=>{if(await saveBooks(state.books.map(b=>b.id===id?{...b,favorite:!b.favorite,updatedAt:new Date().toISOString()}:b)))showBook(id);};
 }
 function editBook(book=null) {
-  if(busy || coverBusy)return;selectedId=book?.id || null;form.reset();formField('id').value=selectedId || '';draftCover=book?.cover || '';$('cover-input').value='';
+  if(busy || coverBusy)return;selectedId=book?.id || null;form.reset();formField('id').value=selectedId || '';draftCover=book?.cover || '';$('cover-input').value='';$('pdf-input').value='';refreshPdf(book);
   for(const key of fields){const value=book?.[key] ?? (key==='quantity'?1:key==='status'?'Есть на полке':key==='reading'?'Не читали':'');const input=formField(key);if(input.tagName==='SELECT' && ![...input.options].some(o=>o.value===String(value)))input.add(new Option(String(value),String(value)));input.value=value;}
   formField('favorite').checked=!!book?.favorite;formField('review').checked=!!book?.review;
   $('dialog-title').textContent=book?'Редактирование книги':'Новая книга';$('detail').hidden=true;form.hidden=false;$('form-error').textContent='';updateCoverPreview();updateISBHint();initialForm=currentForm();
@@ -104,7 +110,7 @@ async function saveBooks(books) {
 }
 async function deleteBook(book) {
   if(!await confirmation(`Удалить «${book.title || book.isbn}» из рабочего каталога? Исходный каталог останется без изменений.`,'Удалить'))return;
-  if(await saveBooks(state.books.filter(b=>b.id!==book.id)))$('book-dialog').close();
+  if(await saveBooks(state.books.filter(b=>b.id!==book.id))){if(book.pdf)fetch('/api/books/'+encodeURIComponent(book.id)+'/file',{method:'DELETE'}).catch(()=>{});$('book-dialog').close();}
 }
 form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy || coverBusy)return;$('form-error').textContent='';
@@ -126,6 +132,34 @@ $('cover-input').addEventListener('change',async event=>{
   catch{$('form-error').textContent='Не удалось прочитать изображение. Выберите другой файл.';}finally{coverBusy=false;$('save-book').disabled=false;$('cover-input').disabled=false;}
 });
 $('remove-cover').onclick=()=>{draftCover='';$('cover-input').value='';updateCoverPreview();};
+function refreshPdf(book){
+  const pdf=book?.pdf;
+  $('pdf-status').textContent=pdf?`Прикреплён: ${pdf.name} · ${fileSize(pdf.size)}`:'PDF не прикреплён';
+  $('remove-pdf').hidden=!pdf;
+  $('pdf-input').disabled=!book;
+  $('pdf-input').title=book?'':'Сначала сохраните книгу, затем прикрепите PDF.';
+}
+async function refreshPdfFromState(){await freshState();refreshPdf(bookById(selectedId));}
+$('pdf-input').addEventListener('change',async event=>{
+  const file=event.target.files[0];event.target.value='';
+  if(!file || !selectedId)return;
+  if(file.size>80*1024*1024){$('form-error').textContent='PDF больше 80 МБ.';return;}
+  if(file.type && file.type!=='application/pdf'){$('form-error').textContent='Выберите PDF-файл.';return;}
+  $('pdf-status').textContent='Загружаем PDF…';$('pdf-input').disabled=true;$('form-error').textContent='';
+  try{const response=await fetch('/api/books/'+encodeURIComponent(selectedId)+'/file',{method:'POST',headers:{'Content-Type':'application/pdf','X-File-Name':encodeURIComponent(file.name)},body:file});
+    const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error || 'Не удалось загрузить PDF');
+    await refreshPdfFromState();message('PDF прикреплён');}
+  catch(error){$('form-error').textContent=error.message;refreshPdf(bookById(selectedId));}
+  finally{$('pdf-input').disabled=false;}
+});
+$('remove-pdf').onclick=async()=>{
+  if(!selectedId)return;
+  if(!await confirmation('Удалить прикреплённый PDF?','Удалить'))return;
+  try{const response=await fetch('/api/books/'+encodeURIComponent(selectedId)+'/file',{method:'DELETE'});
+    if(!response.ok)throw new Error('Не удалось удалить PDF');
+    await refreshPdfFromState();message('PDF удалён');}
+  catch(error){$('form-error').textContent=error.message;}
+};
 formField('isbn').addEventListener('input',updateISBHint);
 $('close-dialog').onclick=closeDialog;$('cancel-edit').onclick=closeDialog;$('book-dialog').addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 $('add').onclick=()=>state && editBook();

@@ -228,7 +228,7 @@ main{max-width:var(--page);margin:0 auto;padding:0 20px 40px}
 .results-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:14px 0 10px;flex-wrap:wrap}
 .result-count{margin:0;font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .results-tools{display:flex;align-items:center;gap:10px;margin-left:auto}
-.page-size{position:relative;display:flex;align-items:center;gap:8px}
+.page-size{position:relative;display:flex;flex-direction:row;align-items:center;gap:8px}
 .page-size-label{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
 .page-size-field{position:relative;display:inline-flex}
 .page-size select{

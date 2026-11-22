@@ -240,6 +240,9 @@ main{max-width:var(--page);margin:0 auto;padding:0 20px 40px}
   border-right:1.5px solid var(--ink-2);border-bottom:1.5px solid var(--ink-2);
   transform:translateY(-70%) rotate(45deg);pointer-events:none;
 }
+.auto-load{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.auto-load input{width:15px;height:15px;padding:0;margin:0;accent-color:var(--accent);cursor:pointer}
+.auto-short{display:none}
 
 /* --- Карточки книг --- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px}
@@ -305,7 +308,11 @@ td button{color:var(--ink);font-weight:500;background:none;border:0;padding:0;te
 td button:hover{color:var(--accent);text-decoration:underline}
 
 /* --- Пагинация и подвал --- */
-.pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin:32px 0 8px}
+.pagination{display:flex;flex-direction:column;align-items:center;gap:10px;margin:28px 0 10px}
+.pagination:empty{display:none}
+#load-more{padding:10px 22px;font-size:14px;min-width:190px;border-radius:9px}
+#load-more:hover{background:var(--surface-2)}
+#load-more:disabled{opacity:.5}
 .pagination span{font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
 .pagination button{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -465,6 +472,9 @@ textarea{resize:vertical;line-height:1.45}
   .tab-short{display:inline}
   .results-bar{gap:10px;margin:12px 0 8px}
   .page-size-label{display:none}
+  .count-range{display:none}
+  .auto-long{display:none}
+  .auto-short{display:inline}
   .page-size select{height:32px;font-size:12.5px}
   .views button span{display:none}
   .views button{padding:6px 10px}

@@ -9,11 +9,21 @@ function validISBN(value) {
   if (/^\d{9}[\dX]$/.test(s)) return [...s].reduce((sum,c,i)=>sum+(c==='X'?10:Number(c))*(10-i),0)%11===0;
   return /^\d{13}$/.test(s) && [...s].reduce((sum,c,i)=>sum+Number(c)*(i%2?3:1),0)%10===0;
 }
-let state = null, tab = 'all', view = 'grid', page = 1, selectedId = null, draftCover = '', initialForm = '', busy = false, coverBusy = false;
-const PAGE_SIZES = [36, 72, 144];
+let state = null, tab = 'all', view = 'grid', shown = 0, selectedId = null, draftCover = '', initialForm = '', busy = false, coverBusy = false;
+const PAGE_SIZES = [10, 50, 100];
 const PAGE_SIZE_KEY = 'misha-page-size';
-let pageSize = 'all';
-try { const saved = localStorage.getItem(PAGE_SIZE_KEY); pageSize = saved === 'all' ? 'all' : (PAGE_SIZES.includes(Number(saved)) ? Number(saved) : 'all'); } catch (error) { pageSize = 'all'; }
+const defaultPageSize = () => window.matchMedia('(max-width:560px)').matches ? 10 : 50;
+let pageSize = defaultPageSize();
+try {
+  const saved = localStorage.getItem(PAGE_SIZE_KEY);
+  if (saved === 'all') pageSize = 'all';
+  else if (PAGE_SIZES.includes(Number(saved))) pageSize = Number(saved);
+} catch (error) {}
+const resetShown = () => { shown = pageSize === 'all' ? Infinity : pageSize; };
+resetShown();
+const AUTO_LOAD_KEY = 'misha-autoload';
+let autoLoad = true;
+try { const savedAuto = localStorage.getItem(AUTO_LOAD_KEY); if (savedAuto !== null) autoLoad = savedAuto !== '0'; } catch (error) {}
 const fields = ['title','author','isbn','publisher','year','series','pages','illustrator','category','quantity','status','reading','notes'];
 const form = $('book-form');
 const formField = key => form.elements.namedItem(key);
@@ -85,15 +95,32 @@ function render() {
   if(!state)return;
   $('total').textContent=state.books.length;$('review-count').textContent=state.books.filter(b=>b.review).length;$('favorite-count').textContent=state.books.filter(b=>b.favorite).length;
   const all=filteredBooks();
-  const perPage=pageSize==='all'?Math.max(all.length,1):pageSize;
-  const pages=Math.max(1,Math.ceil(all.length/perPage));page=Math.min(page,pages);
-  const books=all.slice((page-1)*perPage,page*perPage);
-  $('result-count').textContent=!all.length?'Ничего не найдено':pages>1?`Найдено ${all.length} · показаны ${(page-1)*perPage+1}–${(page-1)*perPage+books.length}`:`Найдено ${all.length}`;
+  const limit=pageSize==='all'?all.length:Math.min(shown||pageSize,all.length);
+  const books=all.slice(0,limit);
+  const remaining=all.length-limit;
+  $('result-count').innerHTML=!all.length?'Ничего не найдено':remaining>0?`Найдено ${all.length}<span class="count-range"> · показаны 1–${limit}</span>`:`Найдено ${all.length}`;
   $('results').className=view==='grid'?'grid':'table-wrap';
   if(!all.length){$('results').innerHTML='<div class="empty"><h2>Здесь пока нет книг</h2><p>Попробуйте другой запрос или сбросьте фильтры.</p><button id="reset-filters">Сбросить фильтры</button></div>';}
   else if(view==='grid')$('results').innerHTML=books.map(book=>`<button class="book" data-open="${escapeHtml(book.id)}" data-spine="${spineFor(book.category || book.title)}">${coverHTML(book)}${book.favorite?heartMark:''}<span class="book-copy"><span class="book-title">${escapeHtml(book.title || 'Книга по ISBN')}</span><span class="book-author">${escapeHtml(book.author || book.isbn || 'Автор не указан')}</span>${badges(book)}</span></button>`).join('');
   else $('results').innerHTML=`<table><thead><tr><th>Название</th><th>Автор</th><th>ISBN</th><th>Экз.</th><th>Статус</th></tr></thead><tbody>${books.map(book=>`<tr><td><button data-open="${escapeHtml(book.id)}">${book.favorite?'<span class="row-heart" aria-hidden="true">♥</span>':''}${escapeHtml(book.title || 'Книга по ISBN')}</button></td><td>${escapeHtml(book.author || '—')}</td><td class="isbn">${escapeHtml(book.isbn || '—')}</td><td>${book.quantity}</td><td>${book.review?'<span class="tag warn">Уточнить</span>':escapeHtml(book.status)}</td></tr>`).join('')}</tbody></table>`;
-  $('pagination').innerHTML=pages>1&&pageSize!=='all'?`<button data-page="${page-1}" ${page===1?'disabled':''}>← Назад</button><span>${page} / ${pages}</span><button data-page="${page+1}" ${page===pages?'disabled':''}>Далее →</button>`:'';
+  $('pagination').innerHTML=remaining>0?`<button id="load-more" type="button">Показать ещё ${Math.min(pageSize,remaining)}</button>`:'';
+  watchLoadMore();
+}
+let loadObserver=null;
+function watchLoadMore(){
+  if(loadObserver){loadObserver.disconnect();loadObserver=null;}
+  const button=$('load-more');
+  if(!button || !autoLoad || !('IntersectionObserver' in window))return;
+  loadObserver=new IntersectionObserver(entries=>{
+    if(entries.some(entry=>entry.isIntersecting)){loadObserver.disconnect();loadObserver=null;loadMore();}
+  },{rootMargin:'600px 0px'});
+  loadObserver.observe(button);
+}
+function loadMore(){
+  const all=filteredBooks();
+  if(pageSize==='all' || shown>=all.length)return;
+  shown=Math.min(shown+pageSize,all.length);
+  render();
 }
 function bookById(id){return state.books.find(b=>b.id===id);}
 function showBook(id) {
@@ -184,19 +211,26 @@ $('remove-pdf').onclick=async()=>{
 formField('isbn').addEventListener('input',updateISBHint);
 $('close-dialog').onclick=closeDialog;$('cancel-edit').onclick=closeDialog;$('book-dialog').addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 $('add').onclick=()=>state && editBook();
-$('search').addEventListener('input',()=>{page=1;render();});
-for(const id of ['category','reading','sort'])$(id).addEventListener('change',()=>{page=1;render();});
+$('search').addEventListener('input',()=>{resetShown();render();});
+for(const id of ['category','reading','sort'])$(id).addEventListener('change',()=>{resetShown();render();});
 const pageSizeSelect=$('page-size');
 pageSizeSelect.value=String(pageSize);
 pageSizeSelect.addEventListener('change',()=>{
   pageSize=pageSizeSelect.value==='all'?'all':Number(pageSizeSelect.value);
   try{localStorage.setItem(PAGE_SIZE_KEY,String(pageSize));}catch(error){}
-  page=1;render();
+  resetShown();render();
 });
-document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{tab=button.dataset.tab;page=1;document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});render();});
+const autoLoadBox=$('auto-load');
+autoLoadBox.checked=autoLoad;
+autoLoadBox.addEventListener('change',()=>{
+  autoLoad=autoLoadBox.checked;
+  try{localStorage.setItem(AUTO_LOAD_KEY,autoLoad?'1':'0');}catch(error){}
+  render();
+});
+document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{tab=button.dataset.tab;resetShown();document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});render();});
 for(const type of ['grid','table'])$(type+'-view').onclick=()=>{view=type;for(const other of ['grid','table']){$(other+'-view').classList.toggle('selected',other===type);$(other+'-view').setAttribute('aria-pressed',String(other===type));}render();};
-$('results').onclick=event=>{const button=event.target.closest('[data-open]');if(button)showBook(button.dataset.open);if(event.target.closest('#reset-filters')){$('search').value='';$('category').value='';$('reading').value='';tab='all';page=1;document.querySelector('[data-tab="all"]').click();}};
-$('pagination').onclick=event=>{const button=event.target.closest('[data-page]');if(button&&!button.disabled){page=Number(button.dataset.page);render();$('results').scrollIntoView({block:'start',behavior:'instant'});}};
+$('results').onclick=event=>{const button=event.target.closest('[data-open]');if(button)showBook(button.dataset.open);if(event.target.closest('#reset-filters')){$('search').value='';$('category').value='';$('reading').value='';tab='all';resetShown();document.querySelector('[data-tab="all"]').click();}};
+$('pagination').onclick=event=>{if(event.target.closest('#load-more'))loadMore();};
 // TRANSFER_CORE_START
 const transferFields=['title','author','isbn','publisher','year','series','pages','illustrator','quantity','category','notes','status','reading','review','favorite','confidence','alternate_isbn','isbn10','language','contents'];
 function aiExport(current) {

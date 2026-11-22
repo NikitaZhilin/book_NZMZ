@@ -83,7 +83,7 @@ function render() {
   $('total').textContent=state.books.length;$('review-count').textContent=state.books.filter(b=>b.review).length;$('favorite-count').textContent=state.books.filter(b=>b.favorite).length;
   const all=filteredBooks(), pages=Math.max(1,Math.ceil(all.length/PAGE_SIZE));page=Math.min(page,pages);
   const books=all.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
-  $('result-count').textContent=all.length?`Найдено ${all.length} · показаны ${(page-1)*PAGE_SIZE+1}–${(page-1)*PAGE_SIZE+books.length}`:'Ничего не найдено';
+  $('result-count').textContent=!all.length?'Ничего не найдено':pages>1?`Найдено ${all.length} · показаны ${(page-1)*PAGE_SIZE+1}–${(page-1)*PAGE_SIZE+books.length}`:`Найдено ${all.length}`;
   $('results').className=view==='grid'?'grid':'table-wrap';
   if(!all.length){$('results').innerHTML='<div class="empty"><h2>Здесь пока нет книг</h2><p>Попробуйте другой запрос или сбросьте фильтры.</p><button id="reset-filters">Сбросить фильтры</button></div>';}
   else if(view==='grid')$('results').innerHTML=books.map(book=>`<button class="book" data-open="${escapeHtml(book.id)}" data-spine="${spineFor(book.category || book.title)}">${coverHTML(book)}${book.favorite?heartMark:''}<span class="book-copy"><span class="book-title">${escapeHtml(book.title || 'Книга по ISBN')}</span><span class="book-author">${escapeHtml(book.author || book.isbn || 'Автор не указан')}</span>${badges(book)}</span></button>`).join('');

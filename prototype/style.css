@@ -22,6 +22,8 @@
   --warn-soft:#f6ecd7;
   --danger:#a53a2f;
   --shadow-float:0 18px 48px rgba(24,32,26,.16);
+  --mark-bg:#fffdf8;
+  --mark-ink:#1f5a46;
   --spine-1:#3f6b54; --spine-2:#a9743f; --spine-3:#8a4b44;
   --spine-4:#4a5f79; --spine-5:#6e6a3e; --spine-6:#7a5470;
   --radius:8px;
@@ -47,6 +49,8 @@
   --warn-soft:#3a2f1c;
   --danger:#e08b7e;
   --shadow-float:0 20px 52px rgba(0,0,0,.55);
+  --mark-bg:#f2ead9;
+  --mark-ink:#1f5a46;
   --spine-1:#5e8c71; --spine-2:#c08f55; --spine-3:#b07069;
   --spine-4:#6f86a2; --spine-5:#98926b; --spine-6:#9c7390;
 }
@@ -69,6 +73,8 @@
     --warn-soft:#3a2f1c;
     --danger:#e08b7e;
     --shadow-float:0 20px 52px rgba(0,0,0,.55);
+  --mark-bg:#f2ead9;
+  --mark-ink:#1f5a46;
     --spine-1:#5e8c71; --spine-2:#c08f55; --spine-3:#b07069;
     --spine-4:#6f86a2; --spine-5:#98926b; --spine-6:#9c7390;
   }
@@ -255,12 +261,12 @@ main{max-width:var(--page);margin:0 auto;padding:0 20px 40px}
 
 .book-meta span{display:inline-flex;align-items:center;padding:1px 5px;border-radius:3px;background:var(--surface-2);color:var(--ink-2);font-size:11px;line-height:1.35}
 .book-meta .tag{background:var(--accent-soft);color:var(--accent);font-weight:500}
-.book-meta .book-mark{
+.book-mark{
   position:absolute;top:8px;right:8px;z-index:3;display:grid;place-items:center;
-  width:24px;height:24px;border-radius:50%;background:var(--surface);color:var(--accent);
+  width:26px;height:26px;border-radius:50%;background:var(--mark-bg);color:var(--mark-ink);
   box-shadow:0 1px 4px rgba(20,28,22,.18);
 }
-.book-mark svg{width:13px;height:13px;fill:currentColor}
+.book-mark svg{width:14px;height:14px;fill:currentColor}
 .empty{
   grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:10px;
   padding:56px 24px;border-radius:10px;background:var(--surface);text-align:center;
@@ -350,7 +356,7 @@ textarea{resize:vertical;line-height:1.45}
   border-radius:var(--radius);background:var(--surface);color:var(--ink);font-size:13.5px;
 }
 .link-button:hover{background:var(--surface-2);text-decoration:none}
-.danger{color:var(--danger)}
+.danger{color:var(--danger);margin-right:auto}
 #confirm-dialog{width:min(480px,calc(100vw - 28px))}
 #confirm-dialog p{color:var(--ink-2);font-size:14px}
 .export-options{display:grid;gap:10px;padding-top:8px;padding-bottom:4px}

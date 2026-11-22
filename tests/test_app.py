@@ -60,7 +60,8 @@ class AppTests(unittest.TestCase):
     def test_index_links_icons_and_theme(self):
         page=self.client.get('/').text
         for marker in ('rel="icon" href="/favicon.svg"','rel="icon" href="/favicon.ico"',
-                       'rel="apple-touch-icon"','/theme.js','data-theme="auto"','prefers-color-scheme'):
+                       'rel="apple-touch-icon"','/theme.js','data-theme="auto"','prefers-color-scheme',
+                       'id="page-size"','id="result-count"','id="pagination"'):
             self.assertIn(marker,page)
 
     def test_help_page(self):

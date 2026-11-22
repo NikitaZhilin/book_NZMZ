@@ -209,7 +209,7 @@ main{max-width:var(--page);margin:0 auto;padding:0 20px 40px}
 .views button.selected{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(20,28,22,.08)}
 .filters{display:grid;grid-template-columns:minmax(240px,1.8fr) repeat(3,minmax(150px,auto));gap:10px;margin-top:12px}
 .search,.filter{position:relative;display:flex;align-items:center}
-.search svg{position:absolute;left:12px;width:16px;height:16px;color:var(--ink-3);pointer-events:none}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-3);pointer-events:none}
 .search input,.filter select{
   width:100%;height:40px;padding:0 14px;background:var(--surface);color:var(--ink);
   border:1px solid var(--line);border-radius:var(--radius);font-size:14px;
@@ -225,7 +225,19 @@ main{max-width:var(--page);margin:0 auto;padding:0 20px 40px}
   transform:translateY(-70%) rotate(45deg);pointer-events:none;
 }
 
-.result-count{margin:14px 0 10px;font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.results-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:14px 0 10px;flex-wrap:wrap}
+.result-count{margin:0;font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.results-tools{display:flex;align-items:center;gap:10px;margin-left:auto}
+.page-size{position:relative;display:flex;align-items:center}
+.page-size select{
+  height:34px;width:auto;padding:0 30px 0 11px;font-size:13px;border-radius:8px;cursor:pointer;
+  background:var(--surface);color:var(--ink);border:1px solid var(--line);appearance:none;
+}
+.page-size::after{
+  content:"";position:absolute;right:12px;top:50%;width:6px;height:6px;
+  border-right:1.5px solid var(--ink-2);border-bottom:1.5px solid var(--ink-2);
+  transform:translateY(-70%) rotate(45deg);pointer-events:none;
+}
 
 /* --- Карточки книг --- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px}
@@ -449,6 +461,8 @@ textarea{resize:vertical;line-height:1.45}
   .tabs{flex-wrap:wrap;overflow:visible;row-gap:4px}
   .tab-long{display:none}
   .tab-short{display:inline}
+  .results-bar{gap:10px;margin:12px 0 8px}
+  .page-size select{height:32px;font-size:12.5px}
   .views button span{display:none}
   .views button{padding:6px 10px}
   .search input,.filter select{height:38px;font-size:13.5px}

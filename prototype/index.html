@@ -50,7 +50,6 @@
 <div class="catalog-bar">
   <div class="catalog-top">
     <nav class="tabs" aria-label="Раздел каталога"><button data-tab="all" class="selected">Все книги</button><button data-tab="shelf">На полке</button><button data-tab="review"><span class="tab-long">Нужно уточнить</span><span class="tab-short">Уточнить</span></button><button data-tab="favorite">Любимые</button></nav>
-    <div class="views" aria-label="Вид каталога"><button id="grid-view" class="selected" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="1.6" width="5" height="5" rx="1"/><rect x="9.4" y="1.6" width="5" height="5" rx="1"/><rect x="1.6" y="9.4" width="5" height="5" rx="1"/><rect x="9.4" y="9.4" width="5" height="5" rx="1"/></svg><span>Карточки</span></button><button id="table-view" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 3.2h12.8M1.6 8h12.8M1.6 12.8h12.8"/></svg><span>Таблица</span></button></div>
   </div>
   <section class="filters" aria-label="Поиск и фильтры">
     <label class="search"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="visually-hidden">Поиск по каталогу</span><input id="search" type="search" placeholder="Название, автор, ISBN или заметка"></label>
@@ -59,7 +58,13 @@
     <label class="filter"><span class="visually-hidden">Порядок</span><select id="sort"><option value="title">По названию</option><option value="author">По автору</option><option value="recent">Недавно изменённые</option></select></label>
   </section>
 </div>
-<p class="result-count" id="result-count" aria-live="polite"></p>
+<div class="results-bar">
+  <p class="result-count" id="result-count" aria-live="polite"></p>
+  <div class="results-tools">
+    <label class="page-size"><span class="visually-hidden">Сколько книг показывать</span><select id="page-size"><option value="36">по 36</option><option value="72">по 72</option><option value="144">по 144</option><option value="all">все</option></select></label>
+    <div class="views" aria-label="Вид каталога"><button id="grid-view" class="selected" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="1.6" width="5" height="5" rx="1"/><rect x="9.4" y="1.6" width="5" height="5" rx="1"/><rect x="1.6" y="9.4" width="5" height="5" rx="1"/><rect x="9.4" y="9.4" width="5" height="5" rx="1"/></svg><span>Карточки</span></button><button id="table-view" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 3.2h12.8M1.6 8h12.8M1.6 12.8h12.8"/></svg><span>Таблица</span></button></div>
+  </div>
+</div>
 <section id="results" class="grid" aria-label="Книги"></section>
 <div id="pagination" class="pagination"></div>
 <footer>Правки сохраняются автоматически. «Полная копия» сохраняет все книги, обложки и исходные данные. «Для ИИ» — редактируемый массив книг без изображений. Перед каждой записью создаётся версия для восстановления.</footer>

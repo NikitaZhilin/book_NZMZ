@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const fold = value => String(value || '').toLocaleLowerCase('ru').replace(/ё/g,'е');
@@ -10,7 +10,10 @@ function validISBN(value) {
   return /^\d{13}$/.test(s) && [...s].reduce((sum,c,i)=>sum+Number(c)*(i%2?3:1),0)%10===0;
 }
 let state = null, tab = 'all', view = 'grid', page = 1, selectedId = null, draftCover = '', initialForm = '', busy = false, coverBusy = false;
-const PAGE_SIZE = 36;
+const PAGE_SIZES = [36, 72, 144];
+const PAGE_SIZE_KEY = 'misha-page-size';
+let pageSize = 'all';
+try { const saved = localStorage.getItem(PAGE_SIZE_KEY); pageSize = saved === 'all' ? 'all' : (PAGE_SIZES.includes(Number(saved)) ? Number(saved) : 'all'); } catch (error) { pageSize = 'all'; }
 const fields = ['title','author','isbn','publisher','year','series','pages','illustrator','category','quantity','status','reading','notes'];
 const form = $('book-form');
 const formField = key => form.elements.namedItem(key);
@@ -81,14 +84,16 @@ function updateCategories() {
 function render() {
   if(!state)return;
   $('total').textContent=state.books.length;$('review-count').textContent=state.books.filter(b=>b.review).length;$('favorite-count').textContent=state.books.filter(b=>b.favorite).length;
-  const all=filteredBooks(), pages=Math.max(1,Math.ceil(all.length/PAGE_SIZE));page=Math.min(page,pages);
-  const books=all.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
-  $('result-count').textContent=!all.length?'Ничего не найдено':pages>1?`Найдено ${all.length} · показаны ${(page-1)*PAGE_SIZE+1}–${(page-1)*PAGE_SIZE+books.length}`:`Найдено ${all.length}`;
+  const all=filteredBooks();
+  const perPage=pageSize==='all'?Math.max(all.length,1):pageSize;
+  const pages=Math.max(1,Math.ceil(all.length/perPage));page=Math.min(page,pages);
+  const books=all.slice((page-1)*perPage,page*perPage);
+  $('result-count').textContent=!all.length?'Ничего не найдено':pages>1?`Найдено ${all.length} · показаны ${(page-1)*perPage+1}–${(page-1)*perPage+books.length}`:`Найдено ${all.length}`;
   $('results').className=view==='grid'?'grid':'table-wrap';
   if(!all.length){$('results').innerHTML='<div class="empty"><h2>Здесь пока нет книг</h2><p>Попробуйте другой запрос или сбросьте фильтры.</p><button id="reset-filters">Сбросить фильтры</button></div>';}
   else if(view==='grid')$('results').innerHTML=books.map(book=>`<button class="book" data-open="${escapeHtml(book.id)}" data-spine="${spineFor(book.category || book.title)}">${coverHTML(book)}${book.favorite?heartMark:''}<span class="book-copy"><span class="book-title">${escapeHtml(book.title || 'Книга по ISBN')}</span><span class="book-author">${escapeHtml(book.author || book.isbn || 'Автор не указан')}</span>${badges(book)}</span></button>`).join('');
   else $('results').innerHTML=`<table><thead><tr><th>Название</th><th>Автор</th><th>ISBN</th><th>Экз.</th><th>Статус</th></tr></thead><tbody>${books.map(book=>`<tr><td><button data-open="${escapeHtml(book.id)}">${book.favorite?'<span class="row-heart" aria-hidden="true">♥</span>':''}${escapeHtml(book.title || 'Книга по ISBN')}</button></td><td>${escapeHtml(book.author || '—')}</td><td class="isbn">${escapeHtml(book.isbn || '—')}</td><td>${book.quantity}</td><td>${book.review?'<span class="tag warn">Уточнить</span>':escapeHtml(book.status)}</td></tr>`).join('')}</tbody></table>`;
-  $('pagination').innerHTML=pages>1?`<button data-page="${page-1}" ${page===1?'disabled':''}>← Назад</button><span>${page} / ${pages}</span><button data-page="${page+1}" ${page===pages?'disabled':''}>Далее →</button>`:'';
+  $('pagination').innerHTML=pages>1&&pageSize!=='all'?`<button data-page="${page-1}" ${page===1?'disabled':''}>← Назад</button><span>${page} / ${pages}</span><button data-page="${page+1}" ${page===pages?'disabled':''}>Далее →</button>`:'';
 }
 function bookById(id){return state.books.find(b=>b.id===id);}
 function showBook(id) {
@@ -181,6 +186,13 @@ $('close-dialog').onclick=closeDialog;$('cancel-edit').onclick=closeDialog;$('bo
 $('add').onclick=()=>state && editBook();
 $('search').addEventListener('input',()=>{page=1;render();});
 for(const id of ['category','reading','sort'])$(id).addEventListener('change',()=>{page=1;render();});
+const pageSizeSelect=$('page-size');
+pageSizeSelect.value=String(pageSize);
+pageSizeSelect.addEventListener('change',()=>{
+  pageSize=pageSizeSelect.value==='all'?'all':Number(pageSizeSelect.value);
+  try{localStorage.setItem(PAGE_SIZE_KEY,String(pageSize));}catch(error){}
+  page=1;render();
+});
 document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{tab=button.dataset.tab;page=1;document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});render();});
 for(const type of ['grid','table'])$(type+'-view').onclick=()=>{view=type;for(const other of ['grid','table']){$(other+'-view').classList.toggle('selected',other===type);$(other+'-view').setAttribute('aria-pressed',String(other===type));}render();};
 $('results').onclick=event=>{const button=event.target.closest('[data-open]');if(button)showBook(button.dataset.open);if(event.target.closest('#reset-filters')){$('search').value='';$('category').value='';$('reading').value='';tab='all';page=1;document.querySelector('[data-tab="all"]').click();}};
